@@ -1,0 +1,149 @@
+cmake_minimum_required(VERSION 3.0)
+
+project(duckdb0)
+ 
+set(CMAKE_CXX_STANDARD 17)
+#Bring the headers, such as Student.h into the project
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Can manually add the sources using the set command as follows:
+#set(SOURCES src/mainapp.cpp src/Student.cpp)
+
+#However, the file(GLOB...) allows for wildcard additions:
+file(GLOB_RECURSE SOURCES "src/**.cpp" "vendor/**.cpp")
+
+# Exclude Filter
+list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/Test/.*" )
+
+# Add source files.
+file (GLOB_RECURSE SOURCE_FILES
+    ${CMAKE_SOURCE_DIR}/src/*.c
+    ${CMAKE_SOURCE_DIR}/src/*.cpp)
+
+# Add header files.
+file (GLOB_RECURSE HEADER_FILES
+    ${CMAKE_SOURCE_DIR}/src/*.h
+    ${CMAKE_SOURCE_DIR}/src/*.hpp)
+
+# "/MP4"
+#add_compile_options("/SUBSYSTEM:WINDOWS")
+#add_link_options("/SUBSYSTEM:WINDOWS")
+#add_compile_options("MAP" "/MP4" "/P" "/emittoolversioninfo:no")
+add_compile_options("/bigobj")
+	
+set(bleh GLOB_RECURSE children ${curdir}/vendor/*)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(
+src 
+src/app
+vendor/duckdb
+)
+
+add_executable(${PROJECT_NAME} ${HEADER_FILES} ${SOURCES})
+
+set_target_properties(${PROJECT_NAME}
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/lib"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/lib"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG  "${CMAKE_CURRENT_SOURCE_DIR}/bin"
+)
+
+
+################################################################
+# LIBS
+################################################################
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/)
+
+target_include_directories(
+    ${PROJECT_NAME} 
+    PUBLIC 
+    "lib/"
+    "lib/duckdb")
+
+#######################
+# DUCKDB
+#######################
+add_library(duckdb STATIC)
+target_include_directories(duckdb PUBLIC "libs/duckdb" "libs/")
+target_sources(
+    duckdb 
+    PRIVATE
+"vendor/duckdb/duckdb.cpp"
+	)
+target_link_libraries(${PROJECT_NAME} duckdb)
+
+
+
+#######################
+# MESSAGES
+#######################
+message(BINARY DIR = ${CMAKE_BINARY_DIR})
+message(OUTPUT_ DIR = ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+message(EXECUTABLE_OUTPUT_PATH = ${EXECUTABLE_OUTPUT_PATH})
+
+
+#######################
+# MACROS
+#######################
+MACRO(SUBDIRLIST result curdir)
+  FILE(GLOB children RELATIVE ${curdir} ${curdir}/*)
+  SET(dirlist "")
+  FOREACH(child ${children})
+    IF(IS_DIRECTORY ${curdir}/${child})
+      LIST(APPEND dirlist ${child})
+    ENDIF()
+  ENDFOREACH()
+  SET(${result} ${dirlist})
+ENDMACRO()
+
+SUBDIRLIST(SUBDIRS ${CMAKE_SOURCE_DIR}/vendor)
+
+message(bleh = ${SUBDIRS})
+message(PROJECT_NAME = ${PROJECT_NAME})
+# https://cmake.org/cmake/help/latest/manual/cmake-commands.7.html
+
+#######################
+# MSVC SPECIFICS
+#######################
+# Create virtual folders to make it look nicer in VS
+if(MSVC_IDE)
+	# Macro to preserve source files hierarchy in the IDE
+	macro(GroupSources curdir)
+		file(GLOB children RELATIVE ${PROJECT_SOURCE_DIR}/${curdir} ${PROJECT_SOURCE_DIR}/${curdir}/*)
+
+		foreach(child ${children})
+			if(IS_DIRECTORY ${PROJECT_SOURCE_DIR}/${curdir}/${child})
+				GroupSources(${curdir}/${child})
+			else()
+				string(REPLACE "/" "\\" groupname ${curdir})
+				string(REPLACE "src" "Sources" groupname ${groupname})
+				source_group(${groupname} FILES ${PROJECT_SOURCE_DIR}/${curdir}/${child})
+			endif()
+		endforeach()
+	endmacro()
+
+	# Run macro
+	GroupSources(src)
+endif()
+
+#######################
+# POST BUILD ACTIONS
+#######################
+# Copy dlls
+
+#if(WIN32)
+#	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+#		COMMAND ${CMAKE_COMMAND} -E copy_directory
+#		"${PROJECT_SOURCE_DIR}/dox"
+#		$<TARGET_FILE_DIR:${PROJECT_NAME}>)
+#endif()
+
+# To nicely support folders in IDEs. 
+set_property(GLOBAL PROPERTY USE_FOLDERS TRUE)

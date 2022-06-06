@@ -10,10 +10,10 @@
 //using namespace std;
 
 namespace fs = std::filesystem;
-
+#if 0
 template<typename T>
 T getTheType(duckdb::Value & inputValue);
-
+#endif
 /* ********************************************************
 	So it begins()
 ******************************************************** */
@@ -119,7 +119,7 @@ int main(int argc, char**) {
 	return 0;
 }
 
-
+#if 0
 template<typename T>
 T getTheType(duckdb::Value & inputValue) {
 	T retval;
@@ -140,3 +140,4 @@ T getTheType(duckdb::Value & inputValue) {
 
 	return retval;
 }
+#endif
